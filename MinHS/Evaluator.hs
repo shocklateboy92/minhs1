@@ -25,6 +25,9 @@ evaluate bs = evalE E.empty (Let bs (Var "main"))
 
 evalE :: VEnv -> Exp -> Value
 evalE g (Num i) = I i
+evalE g (Con "True") = B True
+evalE g (Con "False") = B False
+evalE g (Con "Nil") = Nil
 evalE g (Let [bind] exp) = evalE (boundEnv bind) exp
     where
         boundEnv (Bind id _ _ exp) = E.add g (id, (evalE g exp))
