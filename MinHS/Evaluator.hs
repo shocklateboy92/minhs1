@@ -23,11 +23,30 @@ instance PP.Pretty Value where
 evaluate :: Program -> Value
 evaluate bs = evalE E.empty (Let bs (Var "main"))
 
+applyOp :: Op -> Value -> Value -> Value
+applyOp Add (I x) (I y) = I (x + y)
+applyOp Sub (I x) (I y) = I (x - y)
+applyOp Mul (I x) (I y) = I (x * y)
+applyOp Quot (I x) (I y) = I (x `div` y)
+applyOp Rem (I x) (I y) = I (x `rem` y)
+applyOp Gt (I x) (I y) = B (x > y)
+applyOp Ge (I x) (I y) = B (x >= y)
+applyOp Lt (I x) (I y) = B (x < y)
+applyOp Le (I x) (I y) = B (x <= y)
+applyOp Eq (B x) (B y) = B (x == y)
+applyOp Ne (B x) (B y) = B (x /= y)
+applyOp Eq (I x) (I y) = B (x == y)
+applyOp Ne (I x) (I y) = B (x /= y)
+applyOp op _ _ = error $ "Fuck " ++ show op
+
 evalE :: VEnv -> Exp -> Value
 evalE g (Num i) = I i
 evalE g (Con "True") = B True
 evalE g (Con "False") = B False
 evalE g (Con "Nil") = Nil
+evalE g (App (App (Con "Cons") (Num n)) e2) = Cons n (evalE g e2)
+evalE g (App (App (Prim op) e1) e2) = applyOp op (evalE g e1) (evalE g e2)
+evalE g (App (Prim Neg) (Num n)) = I (negate n)
 evalE g (Let [bind] exp) = evalE (boundEnv bind) exp
     where
         boundEnv (Bind id _ _ exp) = E.add g (id, (evalE g exp))
