@@ -3,3 +3,5 @@
 dist/*
 MinHS/\#[^#]*\#
 MinHS/\.\#[^#]*
+.kateproject
+.kateproject.d
