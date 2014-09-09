@@ -39,14 +39,22 @@ applyOp Eq (I x) (I y) = B (x == y)
 applyOp Ne (I x) (I y) = B (x /= y)
 applyOp op _ _ = error $ "Fuck " ++ show op
 
+applyUnOp :: Op -> Value -> Value
+applyUnOp Head (Cons i v) = I i
+applyUnOp Tail (Cons i v) = v
+applyUnOp Null Nil = B True
+applyUnOp Null (Cons i v) = B False
+applyUnOp op v = error $ "Unsupported operation: " ++ show op ++ " " ++ show v
+
 evalE :: VEnv -> Exp -> Value
 evalE g (Num i) = I i
 evalE g (Con "True") = B True
 evalE g (Con "False") = B False
 evalE g (Con "Nil") = Nil
-evalE g (App (App (Con "Cons") (Num n)) e2) = Cons n (evalE g e2)
+evalE g (App (App (Con "Cons") (Num n)) list) = Cons n (evalE g list)
 evalE g (App (App (Prim op) e1) e2) = applyOp op (evalE g e1) (evalE g e2)
 evalE g (App (Prim Neg) (Num n)) = I (negate n)
+evalE g (App (Prim op) e2) = applyUnOp op (evalE g e2)
 evalE g (Let [bind] exp) = evalE (boundEnv bind) exp
     where
         boundEnv (Bind id _ _ exp) = E.add g (id, (evalE g exp))
