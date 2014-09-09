@@ -54,7 +54,6 @@ evalE g (Con "False") = B False
 evalE g (Con "Nil") = Nil
 evalE g (App (App (Con "Cons") (Num n)) list) = Cons n (evalE g list)
 evalE g (App (App (Prim op) e1) e2) = applyOp op (evalE g e1) (evalE g e2)
---evalE g (App (Prim Neg) (Num n)) = I (negate n)
 evalE g (App (Prim op) e2) = applyUnOp op (evalE g e2)
 evalE g (Let [bind] exp) = evalE (boundEnv bind) exp
     where
