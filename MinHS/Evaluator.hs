@@ -61,4 +61,7 @@ evalE g (Let [bind] exp) = evalE (boundEnv bind) exp
 evalE g (Var id) = case E.lookup g id of
                         (Just val) -> val
                         Nothing -> error $ "Error: Var '" ++ show id ++ "' not in scope"
+evalE g (If e1 e2 e3) = case evalE g e1 of
+                            B True -> evalE g e2
+                            B False -> evalE g e3
 evalE g e = error $ "Not yet handling:\n\t" ++ show e ++ "\nWith Context: \n\t" ++ show g
