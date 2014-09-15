@@ -80,7 +80,8 @@ evalE g (If e1 e2 e3) = case evalE g e1 of
 -- Function application
 evalE g (App (Var f) exp) = case E.lookup g f of
         Nothing -> error $ "Error: function '" ++ show f ++ "' not in scope"
-        Just (Closure context b@(Bind id _ (arg:args) fexp)) -> evalE (E.add context (arg, (evalE g exp))) fexp
+        Just c@(Closure context b@(Bind id _ (arg:args) fexp)) -> evalE (E.addAll context [(arg, (evalE g exp)), (id, c)]) fexp
+evalE g (App (Letfun b@(Bind id _ [arg] fexp)) exp) = evalE (E.addAll g [(arg, (evalE g exp)), (id, (Closure g b))]) fexp
 
 -- Other application - 
 evalE g (App (App (Con "Cons") (Num n)) list) = Cons n (evalE g list)
