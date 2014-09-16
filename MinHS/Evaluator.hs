@@ -63,6 +63,10 @@ evalE g l@(Letfun b@(Bind id _ [arg] exp)) = PApp $ PVal $ \v ->
     let 
         g' = E.addAll g [(arg, v), (id, (evalE g l))]
     in evalE g' exp
+evalE g l@(Letfun b@(Bind id _ [] exp)) = 
+    let 
+        g' = E.addAll g [(id, (evalE g l))]
+    in evalE g' exp
 
 -- Constructing partial application closures
 evalE g (Prim Add) = makeIOp (+)
