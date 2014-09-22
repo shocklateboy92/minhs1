@@ -35,6 +35,7 @@ makeBOp f = PApp $ PVal (\(I v1) -> PApp (PVal (\(I v2) -> (B (v1 `f` v2)))))
 makeIOp :: (Integer -> Integer -> Integer) -> Value
 makeIOp f = PApp $ PVal (\(I v1) -> PApp (PVal (\(I v2) -> (I (v1 `f` v2)))))
 
+-- Start
 evalE :: VEnv -> Exp -> Value
 
 -- Primitives
@@ -47,11 +48,13 @@ evalE g (Con "Cons") = PApp $ PVal $ \(I i) -> PApp $ PVal $ \v -> Cons i v
 -- Variable lookup
 evalE g (Var id) = case E.lookup g id of
                         (Just val) -> val
-                        Nothing -> error $ "Error: Var '" ++ show id ++ "' not in scope"
+                        Nothing -> error $ "Error: Var " ++ show id ++ " not in scope"
+
 -- Variable binding
-evalE g (Let [bind] exp) = evalE (boundEnv bind) exp
+evalE g (Let binds exp) = evalE (boundEnv binds g) exp
     where
-        boundEnv (Bind id _ _ exp) = E.add g (id, (evalE g exp))
+        boundEnv ((Bind id _ _ exp):bs) g' = boundEnv bs $ E.add g' (id, (evalE g' exp))
+        boundEnv [] g' = g'
 
 -- IfthenElse blocks
 evalE g (If e1 e2 e3) = case evalE g e1 of
@@ -59,7 +62,7 @@ evalE g (If e1 e2 e3) = case evalE g e1 of
                             B False -> evalE g e3
 
 -- Constructing function closures
-evalE g l@(Letfun b@(Bind id _ [arg] exp)) = PApp $ PVal $ \v -> 
+evalE g l@(Letfun b@(Bind id _ (arg:args) exp)) = PApp $ PVal $ \v ->
     let 
         g' = E.addAll g [(arg, v), (id, (evalE g l))]
     in evalE g' exp
@@ -68,7 +71,7 @@ evalE g l@(Letfun b@(Bind id _ [] exp)) =
         g' = E.addAll g [(id, (evalE g l))]
     in evalE g' exp
 
--- Constructing partial application closures
+-- Constructing PrimOp closures
 evalE g (Prim Add) = makeIOp (+)
 evalE g (Prim Sub) = makeIOp (-)
 evalE g (Prim Mul) = makeIOp (*)
@@ -92,7 +95,7 @@ evalE g (Prim Neg) = PApp $ PVal $ \(I v1) -> I (negate v1)
 -- Applying partial application closures
 evalE g (App e1 e2) = case evalE g e1 of
                         PApp (PVal f) -> f $ evalE g e2
-                        g -> error $ "wtf?! how did I get a: " ++ show g
+                        x -> error $ "wtf?! how did I get a: " ++ show x
 
 evalE g e = error $ "Not yet handling:\n\t" ++ show e ++ "\nWith Context: \n\t" ++ show g
 
