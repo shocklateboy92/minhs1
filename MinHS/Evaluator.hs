@@ -35,6 +35,7 @@ makeBOp f = PApp $ PVal (\(I v1) -> PApp (PVal (\(I v2) -> (B (v1 `f` v2)))))
 makeIOp :: (Integer -> Integer -> Integer) -> Value
 makeIOp f = PApp $ PVal (\(I v1) -> PApp (PVal (\(I v2) -> (I (v1 `f` v2)))))
 
+
 -- Start
 evalE :: VEnv -> Exp -> Value
 
@@ -62,14 +63,19 @@ evalE g (If e1 e2 e3) = case evalE g e1 of
                             B False -> evalE g e3
 
 -- Constructing function closures
-evalE g l@(Letfun b@(Bind id _ (arg:args) exp)) = PApp $ PVal $ \v ->
-    let 
-        g' = E.addAll g [(arg, v), (id, (evalE g l))]
-    in evalE g' exp
-evalE g l@(Letfun b@(Bind id _ [] exp)) = 
-    let 
-        g' = E.addAll g [(id, (evalE g l))]
-    in evalE g' exp
+evalE g l@(Letfun b@(Bind id t args exp)) = doThang g' id args exp
+    where
+        g' = E.add g (id, (evalE g l))
+
+        doThang g id (arg:args) exp = PApp $ PVal $
+            \v -> doThang (E.add g (arg, v)) id (args) exp
+        doThang g id [] exp = evalE g exp
+--evalE g l@(Letfun b@(Bind id t (arg:args) exp)) = PApp $ PVal $
+--    \v -> evalE (E.add g (arg, v)) (Letfun (Bind id t (args) exp))
+--evalE g l@(Letfun b@(Bind id _ [] exp)) = PApp $ PVal $ \v ->
+--    let
+--        g' = E.addAll g [(id, (evalE g l))]
+--    in evalE g' exp
 
 -- Constructing PrimOp closures
 evalE g (Prim Add) = makeIOp (+)
