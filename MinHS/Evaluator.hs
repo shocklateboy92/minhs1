@@ -35,6 +35,10 @@ makeBOp f = PApp $ PVal (\(I v1) -> PApp (PVal (\(I v2) -> (B (v1 `f` v2)))))
 makeIOp :: (Integer -> Integer -> Integer) -> Value
 makeIOp f = PApp $ PVal (\(I v1) -> PApp (PVal (\(I v2) -> (I (v1 `f` v2)))))
 
+makeClosure :: VEnv -> [Id] -> Exp -> Value
+makeClosure g (arg:args) exp = PApp $ PVal $
+    \v -> makeClosure (E.add g (arg, v)) (args) exp
+makeClosure g [] exp = evalE g exp
 
 -- Start
 evalE :: VEnv -> Exp -> Value
@@ -54,12 +58,8 @@ evalE g (Var id) = case E.lookup g id of
 -- Variable binding
 evalE g (Let binds exp) = evalE (boundEnv binds g) exp
     where
-        boundEnv ((Bind id _ args exp):bs) g' = boundEnv bs $ E.add g' (id, (closure g' args exp))
+        boundEnv ((Bind id _ args exp):bs) g' = boundEnv bs $ E.add g' (id, (makeClosure g' args exp))
         boundEnv [] g' = g'
-
-        closure g (arg:args) exp = PApp $ PVal $
-            \v -> closure (E.add g (arg, v)) (args) exp
-        closure g [] exp = evalE g exp
 
 -- IfthenElse blocks
 evalE g (If e1 e2 e3) = case evalE g e1 of
@@ -67,14 +67,14 @@ evalE g (If e1 e2 e3) = case evalE g e1 of
                             B False -> evalE g e3
 
 -- Constructing function closures
-evalE g l@(Letfun (Bind id t args exp)) = closure g' args exp
+evalE g l@(Letfun (Bind id t args exp)) = makeClosure g' args exp
     where
         g' = E.add g (id, (evalE g l))
 
-        closure g (arg:args) exp = PApp $ PVal $
-            \v -> closure (E.add g (arg, v)) (args) exp
-        closure g [] exp = evalE g exp
-
+evalE g r@(Letrec binds exp) = evalE g' exp
+    where
+        g' = E.addAll g $ map f binds
+        f (Bind id _ args body) = (id, makeClosure g' args body)
 
 -- Constructing PrimOp closures
 evalE g (Prim Add) = makeIOp (+)
