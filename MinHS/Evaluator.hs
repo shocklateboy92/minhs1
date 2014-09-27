@@ -54,8 +54,12 @@ evalE g (Var id) = case E.lookup g id of
 -- Variable binding
 evalE g (Let binds exp) = evalE (boundEnv binds g) exp
     where
-        boundEnv ((Bind id _ _ exp):bs) g' = boundEnv bs $ E.add g' (id, (evalE g' exp))
+        boundEnv ((Bind id _ args exp):bs) g' = boundEnv bs $ E.add g' (id, (closure g' args exp))
         boundEnv [] g' = g'
+
+        closure g (arg:args) exp = PApp $ PVal $
+            \v -> closure (E.add g (arg, v)) (args) exp
+        closure g [] exp = evalE g exp
 
 -- IfthenElse blocks
 evalE g (If e1 e2 e3) = case evalE g e1 of
@@ -63,13 +67,14 @@ evalE g (If e1 e2 e3) = case evalE g e1 of
                             B False -> evalE g e3
 
 -- Constructing function closures
-evalE g l@(Letfun (Bind id t args exp)) = closure g' id args exp
+evalE g l@(Letfun (Bind id t args exp)) = closure g' args exp
     where
         g' = E.add g (id, (evalE g l))
 
-        closure g id (arg:args) exp = PApp $ PVal $
-            \v -> closure (E.add g (arg, v)) id (args) exp
-        closure g id [] exp = evalE g exp
+        closure g (arg:args) exp = PApp $ PVal $
+            \v -> closure (E.add g (arg, v)) (args) exp
+        closure g [] exp = evalE g exp
+
 
 -- Constructing PrimOp closures
 evalE g (Prim Add) = makeIOp (+)
