@@ -88,9 +88,22 @@ unquantify' i s (Forall x t) = do x' <- fresh
                                   unquantify' (i + 1)
                                               ((show i =: x') <> s)
                                               (substQType (x =:TypeVar (show i)) t)
+doThang t11 t12 t21 t22 = do
+    bS <- unify t11 t21
+    bS' <- unify t12 t22
+    return $ bS <> bS'
 
 unify :: Type -> Type -> TC Subst
-unify = error "Fuk da Police! 2"
+unify (TypeVar a) (TypeVar b) | a == b = return emptySubst
+                              | otherwise = return $ b =: TypeVar a
+unify ta@(Base a) tb@(Base b) | a == b = return emptySubst
+                        | otherwise = typeError $ TypeMismatch ta tb
+unify (Prod t11 t12) (Prod t21 t22) = doThang t11 t12 t21 t22
+unify (Sum t11 t12) (Sum t21 t22) = doThang t11 t12 t21 t22
+unify (Arrow t11 t12) (Arrow t21 t22) = doThang t11 t12 t21 t22
+unify (TypeVar a) b = return $ a =: b
+unify a b@(TypeVar _) = unify b a
+unify a b = typeError $ TypeMismatch a b
 
 generalise :: Gamma -> Type -> QType
 generalise g t = 
@@ -138,10 +151,10 @@ inferExp g (Let [(Bind id _ _ e1)] e2) = do
     
 inferExp g exp@(App e1 e2) = do
     (e1', t1, bT) <- inferExp g e1
-    (e2', t2, bT') <- inferExp g e2
-    let alpha = fresh
-    bU <- unify t1 (t2)
-    return (exp, t2, bU)
+    (e2', t2, bT') <- inferExp (substGamma bT g) e2
+    alpha <- fresh
+    bU <- unify (substitute bT' t1) (Arrow t2 alpha)
+    return (exp, substitute bU alpha, bU <> bT <> bT')
 
 inferExp g exp = error $ "Fuk da police! 3" ++ show exp
 -- -- Note: this is the only case you need to handle for case expressions
