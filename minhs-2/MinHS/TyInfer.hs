@@ -107,15 +107,43 @@ inferProgram env [(Bind "main" (Nothing) [] exp)] = do
 inferProgram env bs = error "Fuk da Police!! don't forget to run the result substitution on the"
                             "entire expression using allTypes from Syntax.hs"
 
+-- Start
 inferExp :: Gamma -> Exp -> TC (Exp, Type, Subst)
+
+-- Constant types
 inferExp g exp@(Con c) = case constType c of 
                             Just qt -> do 
                                 t <- unquantify qt
                                 return (exp, t, emptySubst)
                             Nothing -> typeError $ NoSuchConstructor c
+inferExp g exp@(Num c) = return (exp, Base Int, emptySubst)
+
+-- Prim Ops
+inferExp g exp@(Prim op) = do
+    t <- unquantify $ primOpType op
+    return (exp, t, emptySubst)
+
+-- Variable lookup
+inferExp g exp@(Var id) = case E.lookup g id of
+                                Just qt -> do 
+                                    t <- unquantify qt 
+                                    return (exp, t, emptySubst)
+                                Nothing -> typeError $ NoSuchVariable id
+--inferExp g' e2
+inferExp g (Let [(Bind id _ _ e1)] e2) = do
+    (e1', t, fuckYouHaskell) <- inferExp g e1
+    let g' = substGamma fuckYouHaskell g
+    (e2', t', fuckYouHaskell') <- inferExp (E.add g' (id, generalise g' t)) e2
+    return (e2, t', (fuckYouHaskell <> fuckYouHaskell'))
     
---return (exp, , emptySubst)
-inferExp g exp = error "Fuk da police! 3"
+inferExp g exp@(App e1 e2) = do
+    (e1', t1, bT) <- inferExp g e1
+    (e2', t2, bT') <- inferExp g e2
+    let alpha = fresh
+    bU <- unify t1 (t2)
+    return (exp, t2, bU)
+
+inferExp g exp = error $ "Fuk da police! 3" ++ show exp
 -- -- Note: this is the only case you need to handle for case expressions
 -- inferExp g (Case e [Alt "Inl" [x] e1, Alt "Inr" [y] e2])
 -- inferExp g (Case e _) = typeError MalformedAlternatives
