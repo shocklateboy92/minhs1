@@ -158,6 +158,14 @@ inferExp g exp@(App e1 e2) = do
     bU <- unify (substitute bT' t1) (Arrow t2 alpha)
     return (exp, substitute bU alpha, bU <> bT <> bT')
 
+inferExp g exp@(If e e1 e2) = do
+    (e', t, bT) <- inferExp g e
+    bU <- unify t $ Base Bool
+    (e1', t1, bT1) <- inferExp (substGamma (bT <> bU) g) e1
+    (e2', t2, bT2) <- inferExp (substGamma (bT <> bT1 <> bU) g) e2
+    bU' <- unify t1 t2
+    return (exp, substitute bU' t2, bU' <> bT2 <> bT1 <> bU <> bT)
+
 inferExp g exp = error $ "Fuk da police! 3" ++ show exp
 -- -- Note: this is the only case you need to handle for case expressions
 -- inferExp g (Case e [Alt "Inl" [x] e1, Alt "Inr" [y] e2])
