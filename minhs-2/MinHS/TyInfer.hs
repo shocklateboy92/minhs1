@@ -101,8 +101,10 @@ unify ta@(Base a) tb@(Base b) | a == b = return emptySubst
 unify (Prod t11 t12) (Prod t21 t22) = doThang t11 t12 t21 t22
 unify (Sum t11 t12) (Sum t21 t22) = doThang t11 t12 t21 t22
 unify (Arrow t11 t12) (Arrow t21 t22) = doThang t11 t12 t21 t22
-unify (TypeVar a) b = return $ a =: b
+unify (TypeVar v) t | notElem v $ tv t = return $ v =: t
+                    | otherwise = typeError $ OccursCheckFailed v t
 unify a b@(TypeVar _) = unify b a
+
 unify a b = typeError $ TypeMismatch a b
 
 generalise :: Gamma -> Type -> QType
