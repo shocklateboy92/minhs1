@@ -144,12 +144,12 @@ inferExp g exp@(Var id) = case E.lookup g id of
                                     t <- unquantify qt 
                                     return (exp, t, emptySubst)
                                 Nothing -> typeError $ NoSuchVariable id
---inferExp g' e2
-inferExp g (Let [(Bind id _ _ e1)] e2) = do
+--inferExp g (Let [(Bind id _ _ e1)
+inferExp g (Let [(Bind id mType args e1)] e2) = do
     (e1', t, fuckYouHaskell) <- inferExp g e1
     let g' = substGamma fuckYouHaskell g
     (e2', t', fuckYouHaskell') <- inferExp (E.add g' (id, generalise g' t)) e2
-    return (e2, t', (fuckYouHaskell <> fuckYouHaskell'))
+    return ((Let [(Bind id (Just (generalise g' t)) args e1')] e2'), t', (fuckYouHaskell <> fuckYouHaskell'))
     
 inferExp g exp@(App e1 e2) = do
     (e1', t1, bT) <- inferExp g e1
