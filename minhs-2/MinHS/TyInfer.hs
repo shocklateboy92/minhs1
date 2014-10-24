@@ -166,6 +166,15 @@ inferExp g exp@(If e e1 e2) = do
     bU' <- unify t1 t2
     return (exp, substitute bU' t2, bU' <> bT2 <> bT1 <> bU <> bT)
 
+inferExp g (Letfun (Bind id fType [x] e)) = do
+    alpha1 <- fresh
+    alpha2 <- fresh
+    let g' = E.addAll g [(x, Ty alpha1), (id, Ty alpha2)]
+    (e', t, bT) <- inferExp g' e
+    let arrow1 = (Arrow (substitute bT alpha1) t)
+    bU <- unify (substitute bT alpha2) arrow1
+    return (Letfun $ Bind id (Just $ Ty $ substitute bU arrow1) [x] e', substitute bU arrow1, bU <> bT)
+
 inferExp g exp = error $ "Fuk da police! 3" ++ show exp
 -- -- Note: this is the only case you need to handle for case expressions
 -- inferExp g (Case e [Alt "Inl" [x] e1, Alt "Inr" [y] e2])
